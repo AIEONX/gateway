@@ -16,7 +16,7 @@ import { requestValidator } from './middlewares/requestValidator';
 import { hooks } from './middlewares/hooks';
 import { memoryCache } from './middlewares/cache';
 // import { logger } from 'hono/logger'; //! Have to set this up for Prod Logging
-import {PinoLogger} from './middlewares/logger/pinoLogger'; //! Have to set this up for Prod Logging
+import { PinoLogger } from './middlewares/logger/pinoLogger'; //! Have to set this up for Prod Logging
 
 // Handlers
 import { proxyHandler } from './handlers/proxyHandler';

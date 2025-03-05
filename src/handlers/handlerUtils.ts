@@ -259,7 +259,7 @@ export async function tryPost(
   currentIndex: number | string,
   method: string = 'POST'
 ): Promise<Response> {
-  const {logger} = c.var
+  const { logger } = c.var;
   const overrideParams = providerOption?.overrideParams || {};
   let params: Params =
     requestBody instanceof ReadableStream || requestBody instanceof FormData
@@ -557,7 +557,7 @@ export async function tryPost(
       strictOpenAiCompliance,
       requestBody
     ));
-  logger.info({mappedResponse, retryCount, createdAt, originalResponseJson});
+  logger.info({ mappedResponse, retryCount, createdAt, originalResponseJson });
   return createResponse(mappedResponse, undefined, false, true);
 }
 
@@ -571,11 +571,22 @@ export async function tryTargetsRecursively(
   jsonPath: string,
   inheritedConfig: Record<string, any> = {}
 ): Promise<Response> {
-  const {logger} = c.var
+  const { logger } = c.var;
   const currentTarget: any = { ...targetGroup };
   let currentJsonPath = jsonPath;
   const strategyMode = currentTarget.strategy?.mode;
-  logger.info({"TryTargetsRecursively": {currentTarget, strategyMode, currentJsonPath,fn,targetGroup,method, request, requestHeaders}});
+  logger.info({
+    TryTargetsRecursively: {
+      currentTarget,
+      strategyMode,
+      currentJsonPath,
+      fn,
+      targetGroup,
+      method,
+      request,
+      requestHeaders,
+    },
+  });
   // start: merge inherited config with current target config (preference given to current)
   const currentInheritedConfig: Record<string, any> = {
     overrideParams: {
@@ -698,7 +709,7 @@ export async function tryTargetsRecursively(
     ...currentInheritedConfig.cache,
   };
   // end: merge inherited config with current target config (preference given to current)
-  logger.info({currentTarget, currentInheritedConfig});
+  logger.info({ currentTarget, currentInheritedConfig });
   let response;
 
   switch (strategyMode) {
@@ -821,7 +832,7 @@ export async function tryTargetsRecursively(
           currentJsonPath,
           method
         );
-        logger.info({response});
+        logger.info({ response });
       } catch (error: any) {
         // tryPost always returns a Response.
         // TypeError will check for all unhandled exceptions.
