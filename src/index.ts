@@ -15,13 +15,15 @@ import { getRuntimeKey } from 'hono/adapter';
 import { requestValidator } from './middlewares/requestValidator';
 import { hooks } from './middlewares/hooks';
 import { memoryCache } from './middlewares/cache';
+// import { logger } from 'hono/logger'; //! Have to set this up for Prod Logging
+import {PinoLogger} from './middlewares/logger/pinoLogger'; //! Have to set this up for Prod Logging
 
 // Handlers
 import { proxyHandler } from './handlers/proxyHandler';
 import { chatCompletionsHandler } from './handlers/chatCompletionsHandler';
 import { completionsHandler } from './handlers/completionsHandler';
 import { embeddingsHandler } from './handlers/embeddingsHandler';
-import { logger } from './middlewares/log';
+// import { logger } from './middlewares/log'; //! Have to set this up for local logging for UI
 import { imageGenerationsHandler } from './handlers/imageGenerationsHandler';
 import { createSpeechHandler } from './handlers/createSpeechHandler';
 import { createTranscriptionHandler } from './handlers/createTranscriptionHandler';
@@ -86,7 +88,8 @@ app.use('*', prettyJSON());
 
 // Use logger middleware for all routes
 if (getRuntimeKey() === 'node') {
-  app.use(logger());
+  app.use(PinoLogger());
+  // app.use(logger());
 }
 
 // Use hooks middleware for all routes

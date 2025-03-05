@@ -15,9 +15,11 @@ import { Context } from 'hono';
  */
 export async function chatCompletionsHandler(c: Context): Promise<Response> {
   try {
+    const {logger} = c.var;
     let request = await c.req.json();
     let requestHeaders = Object.fromEntries(c.req.raw.headers);
     const camelCaseConfig = constructConfigFromRequestHeaders(requestHeaders);
+    logger.info({request, camelCaseConfig, requestHeaders});
     const tryTargetsResponse = await tryTargetsRecursively(
       c,
       camelCaseConfig ?? {},
@@ -27,7 +29,6 @@ export async function chatCompletionsHandler(c: Context): Promise<Response> {
       'POST',
       'config'
     );
-
     return tryTargetsResponse;
   } catch (err: any) {
     console.log('chatCompletion error', err.message);
