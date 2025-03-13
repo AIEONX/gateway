@@ -22,6 +22,7 @@ import { chatCompletionsHandler } from './handlers/chatCompletionsHandler';
 import { completionsHandler } from './handlers/completionsHandler';
 import { embeddingsHandler } from './handlers/embeddingsHandler';
 import { logger } from './middlewares/log';
+import { otel } from './middlewares/trace';
 import { imageGenerationsHandler } from './handlers/imageGenerationsHandler';
 import { createSpeechHandler } from './handlers/createSpeechHandler';
 import { createTranscriptionHandler } from './handlers/createTranscriptionHandler';
@@ -32,8 +33,37 @@ import filesHandler from './handlers/filesHandler';
 import batchesHandler from './handlers/batchesHandler';
 import finetuneHandler from './handlers/finetuneHandler';
 
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
+import {
+  BatchSpanProcessor,
+  SimpleSpanProcessor,
+} from '@opentelemetry/sdk-trace-base';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { Resource } from '@opentelemetry/resources';
+
 // Config
 import conf from '../conf.json';
+
+// const sdk = new NodeSDK({
+//   traceExporter: new ConsoleSpanExporter(),
+// })
+
+const sdk = new NodeSDK({
+  resource: new Resource({
+    [ATTR_SERVICE_NAME]: 'AIEONX',
+  }),
+  // spanProcessor: new SimpleSpanProcessor(new OTLPTraceExporter({ url: 'http://localhost:4318/v1/traces' })),
+  spanProcessors: [
+    new SimpleSpanProcessor(new ConsoleSpanExporter()),
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({ url: 'http://localhost:4318/v1/traces' })
+    ),
+  ],
+});
+
+sdk.start();
 
 // Create a new Hono server instance
 const app = new Hono();
@@ -86,7 +116,8 @@ app.use('*', prettyJSON());
 
 // Use logger middleware for all routes
 if (getRuntimeKey() === 'node') {
-  app.use(logger());
+  // app.use(logger());
+  app.use('/v1/*', otel());
 }
 
 // Use hooks middleware for all routes
