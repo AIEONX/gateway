@@ -26,7 +26,7 @@ const broadcastLog = async (log: any) => {
     event: 'log',
     id: String(logId++),
   };
-
+  console.log('Broadcasting log:', message);
   const deadClients: any = [];
 
   // Run all sends in parallel

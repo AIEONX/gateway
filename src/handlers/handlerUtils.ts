@@ -709,7 +709,7 @@ export async function tryTargetsRecursively(
     ...currentInheritedConfig.cache,
   };
   // end: merge inherited config with current target config (preference given to current)
-  logger.info({ currentTarget, currentInheritedConfig });
+  // logger.info({ currentTarget, currentInheritedConfig });
   let response;
 
   switch (strategyMode) {
@@ -832,7 +832,7 @@ export async function tryTargetsRecursively(
           currentJsonPath,
           method
         );
-        logger.info({ response });
+        // logger.info({ response });
       } catch (error: any) {
         // tryPost always returns a Response.
         // TypeError will check for all unhandled exceptions.
@@ -862,7 +862,6 @@ export async function tryTargetsRecursively(
       }
       break;
   }
-
   return response;
 }
 

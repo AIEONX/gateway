@@ -1,3 +1,4 @@
+import { log } from 'console';
 import { RouterError } from '../errors/RouterError';
 import {
   constructConfigFromRequestHeaders,
@@ -15,11 +16,11 @@ import { Context } from 'hono';
  */
 export async function chatCompletionsHandler(c: Context): Promise<Response> {
   try {
-    const { logger } = c.var;
+    // const { logger } = c.var;
     let request = await c.req.json();
     let requestHeaders = Object.fromEntries(c.req.raw.headers);
     const camelCaseConfig = constructConfigFromRequestHeaders(requestHeaders);
-    logger.info({ request, camelCaseConfig, requestHeaders });
+    // logger.info({requestId: c.var.requestId, request: {...request}, requestHeaders: requestHeaders, camelCaseConfig: camelCaseConfig});
     const tryTargetsResponse = await tryTargetsRecursively(
       c,
       camelCaseConfig ?? {},
@@ -29,6 +30,7 @@ export async function chatCompletionsHandler(c: Context): Promise<Response> {
       'POST',
       'config'
     );
+    // logger.info({requestId: c.var.requestId, response: tryTargetsResponse});
     return tryTargetsResponse;
   } catch (err: any) {
     console.log('chatCompletion error', err.message);

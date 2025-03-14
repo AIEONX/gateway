@@ -15,8 +15,6 @@ import { getRuntimeKey } from 'hono/adapter';
 import { requestValidator } from './middlewares/requestValidator';
 import { hooks } from './middlewares/hooks';
 import { memoryCache } from './middlewares/cache';
-// import { logger } from 'hono/logger'; //! Have to set this up for Prod Logging
-import { PinoLogger } from './middlewares/logger/pinoLogger'; //! Have to set this up for Prod Logging
 
 // Handlers
 import { proxyHandler } from './handlers/proxyHandler';
@@ -36,9 +34,100 @@ import finetuneHandler from './handlers/finetuneHandler';
 
 // Config
 import conf from '../conf.json';
+// import { requestId } from 'hono/request-id';
+// import { pinoHttp } from 'pino-http';
+// import { logger } from 'hono/logger'; //! Have to set this up for Prod Logging
+// import { PinoLogger } from './middlewares/logger/pinoLogger'; //! Have to set this up for Prod Logging
+// import pino from 'pino';
+
+import { requestId } from 'hono/request-id';
+import { pinoLogger } from 'hono-pino';
+import pino from 'pino';
+// import { pinoHttp } from 'pino-http';
+// import { logger } from './middlewares/log';
+// import { colorizerFactory } from 'pino-pretty';
+import { otel } from '@hono/otel'
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import {
+  PeriodicExportingMetricReader,
+  ConsoleMetricExporter,
+} from '@opentelemetry/sdk-metrics';
+
+
+// custom middleware for logging
+
+// const sdk = new NodeSDK({
+//   traceExporter: new ConsoleSpanExporter(),
+//   metricReader: new PeriodicExportingMetricReader({
+//     exporter: new ConsoleMetricExporter(),
+//   }),
+//   instrumentations: [getNodeAutoInstrumentations()],
+// })
+
+// sdk.start()
 
 // Create a new Hono server instance
 const app = new Hono();
+const logger = pinoLogger({
+  pino: pino({
+    serializers: {
+      req: pino.stdSerializers.req,
+      res: pino.stdSerializers.res,
+      err: pino.stdSerializers.err,
+    },
+    transport: {
+      targets: [
+        {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+          },
+        },
+      ],
+    },
+}),
+  http: {
+    reqId: () => crypto.randomUUID(),
+    onReqBindings: async (c) => {
+      return {
+        reqId: c.get('reqId'),
+        requestId: async () => await c.res.text(),
+        res: () => {return new Promise(async (resolve, reject) => {
+           resolve(await c.req.json());
+        })}
+        ,
+      }
+    },
+  },
+});
+
+// app.use('*', otel());
+
+// Logger middleware
+// const logger = pino();
+// app.use(async (c, next) => {
+//   const reqData = await c.req.json();  
+//   const resData = await c.res.clone().json();
+//   logger.trace({ req: reqData, res: resData });
+//   return next();
+// })
+app.use('*', pinoLogger({
+  pino: pino({
+    transport: {
+      targets: [
+        {
+          target: 'pino-pretty',
+          options: {
+           colorize: true,
+          },
+        },
+      ],
+    },
+  }),
+}));
+
 /**
  * Middleware that conditionally applies compression middleware based on the runtime.
  * Compression is automatically handled for lagon and workerd runtimes
@@ -59,9 +148,7 @@ if (runtime === 'node') {
     if (!c.req.url.includes('/realtime')) {
       return next();
     }
-
     await next();
-
     if (
       c.req.url.includes('/realtime') &&
       c.req.header('upgrade') === 'websocket' &&
@@ -81,16 +168,13 @@ if (runtime === 'node') {
  * GET route for the root path.
  * Returns a greeting message.
  */
-app.get('/', (c) => c.text('AI Gateway says hey!'));
+app.get('/', (c) => c.text('AIEONX Router!!'));
 
 // Use prettyJSON middleware for all routes
 app.use('*', prettyJSON());
 
-// Use logger middleware for all routes
-if (getRuntimeKey() === 'node') {
-  app.use(PinoLogger());
-  // app.use(logger());
-}
+// Use requestId middleware for all routes
+app.use('*', requestId())
 
 // Use hooks middleware for all routes
 app.use('*', hooks);
