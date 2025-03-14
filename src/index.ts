@@ -46,15 +46,14 @@ import pino from 'pino';
 // import { pinoHttp } from 'pino-http';
 // import { logger } from './middlewares/log';
 // import { colorizerFactory } from 'pino-pretty';
-import { otel } from '@hono/otel'
-import { NodeSDK } from '@opentelemetry/sdk-node'
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node'
+import { otel } from '@hono/otel';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import {
   PeriodicExportingMetricReader,
   ConsoleMetricExporter,
 } from '@opentelemetry/sdk-metrics';
-
 
 // custom middleware for logging
 
@@ -87,18 +86,19 @@ const logger = pinoLogger({
         },
       ],
     },
-}),
+  }),
   http: {
     reqId: () => crypto.randomUUID(),
     onReqBindings: async (c) => {
       return {
         reqId: c.get('reqId'),
         requestId: async () => await c.res.text(),
-        res: () => {return new Promise(async (resolve, reject) => {
-           resolve(await c.req.json());
-        })}
-        ,
-      }
+        res: () => {
+          return new Promise(async (resolve, reject) => {
+            resolve(await c.req.json());
+          });
+        },
+      };
     },
   },
 });
@@ -108,25 +108,28 @@ const logger = pinoLogger({
 // Logger middleware
 // const logger = pino();
 // app.use(async (c, next) => {
-//   const reqData = await c.req.json();  
+//   const reqData = await c.req.json();
 //   const resData = await c.res.clone().json();
 //   logger.trace({ req: reqData, res: resData });
 //   return next();
 // })
-app.use('*', pinoLogger({
-  pino: pino({
-    transport: {
-      targets: [
-        {
-          target: 'pino-pretty',
-          options: {
-           colorize: true,
+app.use(
+  '*',
+  pinoLogger({
+    pino: pino({
+      transport: {
+        targets: [
+          {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+            },
           },
-        },
-      ],
-    },
-  }),
-}));
+        ],
+      },
+    }),
+  })
+);
 
 /**
  * Middleware that conditionally applies compression middleware based on the runtime.
@@ -174,7 +177,7 @@ app.get('/', (c) => c.text('AIEONX Router!!'));
 app.use('*', prettyJSON());
 
 // Use requestId middleware for all routes
-app.use('*', requestId())
+app.use('*', requestId());
 
 // Use hooks middleware for all routes
 app.use('*', hooks);
