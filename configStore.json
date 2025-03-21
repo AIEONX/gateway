@@ -1,0 +1,4 @@
+{
+  "freshbots-summary-openai": "{\"strategy\":{\"mode\":\"loadbalance\"},\"targets\":[{\"provider\":\"openai\",\"api_key\":\"sk-****\"},{\"provider\":\"openai\",\"api_key\":\"sk-****\"}]}",
+  "wrong-config": "{\"theme\":\"light\",\"features\":[\"api-v2\"]}"
+}

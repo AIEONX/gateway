@@ -34,6 +34,7 @@ import { ConditionalRouter } from '../services/conditionalRouter';
 import { RouterError } from '../errors/RouterError';
 import { GatewayError } from '../errors/GatewayError';
 import { HookType } from '../middlewares/hooks/types';
+import { getConfigStringBySlug } from '../utils/configLoader';
 
 /**
  * Constructs the request options for the API call.
@@ -1031,7 +1032,9 @@ export function constructConfigFromRequestHeaders(
   }
 
   if (requestHeaders[`x-${POWERED_BY}-config`]) {
-    let parsedConfigJson = JSON.parse(requestHeaders[`x-${POWERED_BY}-config`]);
+    // let parsedConfigJson = JSON.parse(requestHeaders[`x-${POWERED_BY}-config`]);
+    const configSlug = requestHeaders[`x-${POWERED_BY}-config`];
+    let parsedConfigJson = JSON.parse(getConfigStringBySlug(configSlug));
 
     if (!parsedConfigJson.provider && !parsedConfigJson.targets) {
       parsedConfigJson.provider = requestHeaders[`x-${POWERED_BY}-provider`];

@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { CONTENT_TYPES, POWERED_BY, VALID_PROVIDERS } from '../../globals';
 import { configSchema } from './schema/config';
+import { getConfigStringBySlug } from '../../utils/configLoader';
 
 export const requestValidator = (c: Context, next: any) => {
   const requestHeaders = Object.fromEntries(c.req.raw.headers);
@@ -83,7 +84,10 @@ export const requestValidator = (c: Context, next: any) => {
 
   if (requestHeaders[`x-${POWERED_BY}-config`]) {
     try {
-      const parsedConfig = JSON.parse(requestHeaders[`x-${POWERED_BY}-config`]);
+      // const parsedConfig = JSON.parse(requestHeaders[`x-${POWERED_BY}-config`]);
+      const configSlug = requestHeaders[`x-${POWERED_BY}-config`];
+      const configString = getConfigStringBySlug(configSlug);
+      const parsedConfig = JSON.parse(configString);
       if (
         !requestHeaders[`x-${POWERED_BY}-provider`] &&
         !(parsedConfig.provider || parsedConfig.targets)
