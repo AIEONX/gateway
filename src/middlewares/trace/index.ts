@@ -99,22 +99,24 @@ async function processLog(c: Context, start: number) {
   if (!c.req.url.includes('/v1/')) return '';
 
   const requestOptionsArray = c.get('requestOptions');
+  console.log('requestOptionsArray', requestOptionsArray);
   if (!requestOptionsArray?.length) {
     return '';
   }
-
+  let response;
   if (requestOptionsArray[0].requestParams.stream) {
     requestOptionsArray[0].response = {
       message: 'The response was a stream.',
     };
   } else {
-    const response = await c.res.clone().json();
-    const maxLength = 1000; // Set a reasonable limit for the response length
-    const responseString = JSON.stringify(response);
-    requestOptionsArray[0].response =
-      responseString.length > maxLength
-        ? JSON.parse(responseString.substring(0, maxLength) + '...')
-        : response;
+    response = await c.res.clone().json();
+    // console.log('response', JSON.stringify(response));
+    // const maxLength = 1000; // Set a reasonable limit for the response length
+    // const responseString = JSON.stringify(response);
+    // requestOptionsArray[0].response =
+    //   responseString.length > maxLength
+    //     ? JSON.parse(responseString.substring(0, maxLength) + '...')
+    //     : response;
   }
 
   return JSON.stringify({
@@ -124,6 +126,7 @@ async function processLog(c: Context, start: number) {
     status: c.res.status,
     duration: ms,
     requestOptions: requestOptionsArray,
+    response: response,
   });
 }
 
@@ -133,8 +136,8 @@ function mapJsonToSpanAttributes(message: string) {
 
   const requestOption = parsedMessage.requestOptions[0];
   const requestBody = requestOption.transformedRequest.body;
-  const response = requestOption.response;
-
+  const response = parsedMessage.response;
+  // console.log(parsedMessage)
   // General Span Attributes
   attributes['gen_ai.endpoint'] = parsedMessage.endpoint;
   attributes['gen_ai.system'] = requestOption.providerOptions.provider;
@@ -162,6 +165,11 @@ function mapJsonToSpanAttributes(message: string) {
     .map((m: { role: string; content: string }) => `${m.role}: ${m.content}`)
     .join('\n');
   attributes['gen_ai.completion'] = response.choices[0].message.content;
+  attributes['gen_ai.requestOptions'] = parsedMessage.requestOptions;
+  attributes['gen_ai.message'] = message;
+  console.log('sundeep', requestBody, response);
+  attributes['gen_ai.requestBody'] = JSON.stringify(requestBody).toString();
+  attributes['gen_ai.response'] = JSON.stringify(response).toString();
 
   return attributes;
 }
