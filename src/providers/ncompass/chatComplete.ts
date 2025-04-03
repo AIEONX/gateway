@@ -1,4 +1,4 @@
-import { OPENROUTER } from '../../globals';
+import { NCOMPASS } from '../../globals';
 import { Params } from '../../types/requestBody';
 import {
   ChatCompletionResponse,
@@ -10,15 +10,18 @@ import {
   generateInvalidProviderResponseError,
 } from '../utils';
 
-export const OpenrouterChatCompleteConfig: ProviderConfig = {
+// TODOS: this configuration might have to check on the max value of n
+
+export const NCompassChatCompleteConfig: ProviderConfig = {
   model: {
     param: 'model',
     required: true,
-    default: 'openrouter/auto',
+    default: 'meta-llama/Llama-3.3-70B-Instruct',
   },
   messages: {
     param: 'messages',
-    default: '',
+    required: true,
+    default: [],
     transform: (params: Params) => {
       return params.messages?.map((message) => {
         if (message.role === 'developer') return { ...message, role: 'system' };
@@ -26,15 +29,33 @@ export const OpenrouterChatCompleteConfig: ProviderConfig = {
       });
     },
   },
+  frequency_penalty: {
+    param: 'frequency_penalty',
+    default: 0,
+    min: -2,
+    max: 2,
+  },
   max_tokens: {
     param: 'max_tokens',
     default: 100,
-    min: 0,
+    min: 1,
   },
   max_completion_tokens: {
     param: 'max_tokens',
     default: 100,
-    min: 0,
+    min: 1,
+  },
+  n: {
+    param: 'n',
+    default: 1,
+    min: 1,
+    max: 1,
+  },
+  presence_penalty: {
+    param: 'presence_penalty',
+    min: -2,
+    max: 2,
+    default: 0,
   },
   temperature: {
     param: 'temperature',
@@ -48,42 +69,29 @@ export const OpenrouterChatCompleteConfig: ProviderConfig = {
     min: 0,
     max: 1,
   },
+  stop: {
+    param: 'stop',
+    default: null,
+  },
   stream: {
     param: 'stream',
     default: false,
   },
 };
 
-interface OpenrouterChatCompleteResponse extends ChatCompletionResponse {
+export interface NCompassErrorResponse {
+  detail: {
+    loc: string[];
+    msg: string;
+    type: string;
+  }[];
+}
+
+interface NCompassStreamChunk {
   id: string;
   object: string;
   created: number;
   model: string;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-export interface OpenrouterErrorResponse {
-  object: string;
-  message: string;
-  type: string;
-  param: string | null;
-  code: string;
-}
-
-interface OpenrouterStreamChunk {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
   choices: {
     delta: {
       role?: string | null;
@@ -94,19 +102,37 @@ interface OpenrouterStreamChunk {
   }[];
 }
 
-export const OpenrouterChatCompleteResponseTransform: (
-  response: OpenrouterChatCompleteResponse | OpenrouterErrorResponse,
+export const NCompassChatCompleteResponseTransform: (
+  response: ChatCompletionResponse | NCompassErrorResponse,
   responseStatus: number
 ) => ChatCompletionResponse | ErrorResponse = (response, responseStatus) => {
-  if ('message' in response && responseStatus !== 200) {
+  if (
+    'detail' in response &&
+    responseStatus !== 200 &&
+    response.detail.length
+  ) {
+    let firstError: Record<string, any> | undefined;
+    let errorField: string | null = null;
+    let errorMessage: string | undefined;
+    let errorType: string | null = null;
+
+    if (Array.isArray(response.detail)) {
+      [firstError] = response.detail;
+      errorField = firstError?.loc?.join('.') ?? '';
+      errorMessage = firstError.msg;
+      errorType = firstError.type;
+    } else {
+      errorMessage = response.detail;
+    }
+
     return generateErrorResponse(
       {
-        message: response.message,
-        type: response.type,
-        param: response.param,
-        code: response.code,
+        message: `${errorField ? `${errorField}: ` : ''}${errorMessage}`,
+        type: errorType,
+        param: null,
+        code: null,
       },
-      OPENROUTER
+      NCOMPASS
     );
   }
 
@@ -116,7 +142,7 @@ export const OpenrouterChatCompleteResponseTransform: (
       object: response.object,
       created: response.created,
       model: response.model,
-      provider: OPENROUTER,
+      provider: NCOMPASS,
       choices: response.choices.map((c) => ({
         index: c.index,
         message: {
@@ -126,17 +152,17 @@ export const OpenrouterChatCompleteResponseTransform: (
         finish_reason: c.finish_reason,
       })),
       usage: {
-        prompt_tokens: response.usage?.prompt_tokens,
-        completion_tokens: response.usage?.completion_tokens,
-        total_tokens: response.usage?.total_tokens,
+        prompt_tokens: response.usage?.prompt_tokens ?? 0,
+        completion_tokens: response.usage?.completion_tokens ?? 0,
+        total_tokens: response.usage?.total_tokens ?? 0,
       },
     };
   }
 
-  return generateInvalidProviderResponseError(response, OPENROUTER);
+  return generateInvalidProviderResponseError(response, NCOMPASS);
 };
 
-export const OpenrouterChatCompleteStreamChunkTransform: (
+export const NCompassChatCompleteStreamChunkTransform: (
   response: string
 ) => string = (responseChunk) => {
   let chunk = responseChunk.trim();
@@ -145,29 +171,14 @@ export const OpenrouterChatCompleteStreamChunkTransform: (
   if (chunk === '[DONE]') {
     return `data: ${chunk}\n\n`;
   }
-  if (chunk.includes('OPENROUTER PROCESSING')) {
-    chunk = JSON.stringify({
-      id: `${Date.now()}`,
-      model: '',
-      object: 'chat.completion.chunk',
-      created: Date.now(),
-      choices: [
-        {
-          index: 0,
-          delta: { role: 'assistant', content: '' },
-          finish_reason: null,
-        },
-      ],
-    });
-  }
-  const parsedChunk: OpenrouterStreamChunk = JSON.parse(chunk);
+  const parsedChunk: NCompassStreamChunk = JSON.parse(chunk);
   return (
     `data: ${JSON.stringify({
       id: parsedChunk.id,
       object: parsedChunk.object,
       created: parsedChunk.created,
       model: parsedChunk.model,
-      provider: OPENROUTER,
+      provider: NCOMPASS,
       choices: [
         {
           index: parsedChunk.choices[0].index,
@@ -175,7 +186,6 @@ export const OpenrouterChatCompleteStreamChunkTransform: (
           finish_reason: parsedChunk.choices[0].finish_reason,
         },
       ],
-      ...(parsedChunk.usage && { usage: parsedChunk.usage }),
     })}` + '\n\n'
   );
 };
